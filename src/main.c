@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
-#include <errno.h>
-#include <stdlib.h>
 
 typedef struct Context Context;
 struct Context {
@@ -26,7 +24,8 @@ I32 main(void) {
     getcwd(ctx.cwd, 1024);
 
     // Intercept Ctrl-C signal as to not quit the shell when canceling a
-    // command.
+    // command. sa_handler cannot be set to SIG_IGN because that doesn't
+    // make fgets return.
     struct sigaction action = {
         .sa_handler = sighandler,
     };
@@ -40,12 +39,12 @@ I32 main(void) {
 
             if (fgets(cmd_buffer, 1024, stdin) == NULL) {
                 if (feof(stdin)) {
-                    exit(EXIT_SUCCESS);
+                    break;
                 }
                 // SIGINT was sent.
                 else {
                     printf("\n");
-                    cmd_buffer[0] = 0;
+                    continue;
                 }
             }
 
@@ -57,5 +56,5 @@ I32 main(void) {
         ar_info("Non-interactive mode.");
     }
 
-    return EXIT_SUCCESS;
+    return 0;
 }
