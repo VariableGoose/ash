@@ -41,7 +41,6 @@ InputType get_cmd_str(char *buffer, U32 buffer_length) {
 I32 main(void) {
     // NOTE: If the shell finds itself in an infinite loop, press Ctrl+\ to
     // send a SIGQUIT signal to the shell itself.
-
     arkin_init(&(ArkinCoreDesc) {
             .error.callback = ar_log_error_callback,
         });
@@ -77,6 +76,13 @@ I32 main(void) {
             ArStr cmd_str = ar_str_cstr(cmd_buffer);
             cmd_str = ar_str_trim(cmd_str);
             CmdTable table = parse_cmd(arena, cmd_str);
+
+            ar_debug("Program: %.*s", (I32) table.program.len, table.program.data);
+            U32 arg_i = 0;
+            for (ArStrListNode *arg = table.args.first; arg != NULL; arg = arg->next) {
+                ar_debug("Arg[%u]: %.*s", arg_i, (I32) table.program.len, table.program.data);
+                arg_i++;
+            }
         }
     } else {
         ar_info("Non-interactive mode.");

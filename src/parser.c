@@ -25,12 +25,10 @@ B8 parser_valid(Parser parser) {
 }
 
 CmdTable parse_cmd(ArArena *arena, ArStr cmd_str) {
-    ArTemp scratch = ar_scratch_get(&arena, 1);
-
     Parser parser = {
         .cmd = cmd_str,
     };
-    ArStrList args = AR_STR_LIST_INIT;
+    CmdTable table = {0};
     while (parser_valid(parser)) {
         while (ar_char_is_whitespace(parser_peek(parser, 0)) && parser_valid(parser)) {
             parser_skip(&parser, 1);
@@ -45,10 +43,12 @@ CmdTable parse_cmd(ArArena *arena, ArStr cmd_str) {
         }
         U64 end = parser.i;
         ArStr arg = ar_str_sub(cmd_str, start, end);
-        ar_str_list_push(scratch.arena, &args, arg);
+        if (table.program.data == NULL) {
+            table.program = arg;
+        } else {
+            ar_str_list_push(arena, &table.args, arg);
+        }
     }
 
-    // for (ArStrListNode *arg = args.first; arg != NULL; arg = arg->next) {
-    //     ar_debug("%.*s", (I32) arg->str.len, arg->str.data);
-    // }
+    return table;
 }
