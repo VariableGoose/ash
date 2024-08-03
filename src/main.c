@@ -1,5 +1,6 @@
 #include "arkin_core.h"
 #include "arkin_log.h"
+#include "parser.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -38,6 +39,9 @@ InputType get_cmd_str(char *buffer, U32 buffer_length) {
 }
 
 I32 main(void) {
+    // NOTE: If the shell finds itself in an infinite loop, press Ctrl+\ to
+    // send a SIGQUIT signal to the shell itself.
+
     arkin_init(&(ArkinCoreDesc) {
             .error.callback = ar_log_error_callback,
         });
@@ -72,7 +76,7 @@ I32 main(void) {
 
             ArStr cmd_str = ar_str_cstr(cmd_buffer);
             cmd_str = ar_str_trim(cmd_str);
-            ar_debug("'%.*s'", (I32) cmd_str.len, cmd_str.data);
+            CmdTable table = parse_cmd(arena, cmd_str);
         }
     } else {
         ar_info("Non-interactive mode.");
