@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
 
 typedef struct Context Context;
 struct Context {
@@ -18,7 +19,30 @@ void sighandler(I32 sig) {
     (void) sig;
 }
 
+typedef enum {
+    INPUT_TYPE_STR,
+    INPUT_TYPE_EOF,
+    INPUT_TYPE_SIGINT,
+} InputType;
+
+InputType get_cmd_str(char *buffer, U32 buffer_length) {
+    if (fgets(buffer, buffer_length, stdin) == NULL) {
+        if (feof(stdin)) {
+            return INPUT_TYPE_EOF;
+        } else {
+            return INPUT_TYPE_SIGINT;
+        }
+    }
+
+    return INPUT_TYPE_STR;
+}
+
 I32 main(void) {
+    arkin_init(&(ArkinCoreDesc) {
+            .error.callback = ar_log_error_callback,
+        });
+    ArArena *arena = ar_arena_create_default();
+
     Context ctx = {0};
 
     getcwd(ctx.cwd, 1024);
@@ -37,15 +61,13 @@ I32 main(void) {
         while (true) {
             prompt(ctx);
 
-            if (fgets(cmd_buffer, 1024, stdin) == NULL) {
-                if (feof(stdin)) {
-                    break;
-                }
-                // SIGINT was sent.
-                else {
+            InputType input_type = get_cmd_str(cmd_buffer, ar_arrlen(cmd_buffer));
+            switch (input_type) {
+                case INPUT_TYPE_STR: break;
+                case INPUT_TYPE_EOF: exit(0);
+                case INPUT_TYPE_SIGINT:
                     printf("\n");
                     continue;
-                }
             }
 
             ArStr cmd_str = ar_str_cstr(cmd_buffer);
@@ -56,5 +78,6 @@ I32 main(void) {
         ar_info("Non-interactive mode.");
     }
 
+    arkin_terminate();
     return 0;
 }
