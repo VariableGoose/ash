@@ -12,6 +12,7 @@ add_subdirectory("libs/arkin")
 
 add_executable(${CMAKE_PROJECT_NAME}
     src/main.c
+    src/lexer.c
     src/parser.c
 )
 target_link_libraries(${CMAKE_PROJECT_NAME} arkin)

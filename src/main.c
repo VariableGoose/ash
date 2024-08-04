@@ -1,5 +1,6 @@
 #include "arkin_core.h"
 #include "arkin_log.h"
+#include "lexer.h"
 #include "parser.h"
 
 #include <stdio.h>
@@ -10,7 +11,16 @@
 typedef struct Context Context;
 struct Context {
     char cwd[1024];
+    ArStrList paths;
 };
+
+Context context_init(ArArena *arena) {
+    Context ctx = {0};
+
+    getcwd(ctx.cwd, ar_arrlen(ctx.cwd));
+
+    return ctx;
+}
 
 void prompt(Context ctx) {
     printf("%s > ", ctx.cwd);
@@ -38,7 +48,7 @@ InputType get_cmd_str(char *buffer, U32 buffer_length) {
     return INPUT_TYPE_STR;
 }
 
-I32 main(void) {
+I32 main(I32 argc, char *argv[]) {
     // NOTE: If the shell finds itself in an infinite loop, press Ctrl+\ to
     // send a SIGQUIT signal to the shell itself.
     arkin_init(&(ArkinCoreDesc) {
@@ -46,9 +56,7 @@ I32 main(void) {
         });
     ArArena *arena = ar_arena_create_default();
 
-    Context ctx = {0};
-
-    getcwd(ctx.cwd, 1024);
+    Context ctx = context_init(arena);
 
     // Intercept Ctrl-C signal as to not quit the shell when canceling a
     // command. sa_handler cannot be set to SIG_IGN because that doesn't
@@ -75,13 +83,10 @@ I32 main(void) {
 
             ArStr cmd_str = ar_str_cstr(cmd_buffer);
             cmd_str = ar_str_trim(cmd_str);
-            CmdTable table = parse_cmd(arena, cmd_str);
 
-            ar_debug("Program: %.*s", (I32) table.program.len, table.program.data);
-            U32 arg_i = 0;
-            for (ArStrListNode *arg = table.args.first; arg != NULL; arg = arg->next) {
-                ar_debug("Arg[%u]: %.*s", arg_i, (I32) table.program.len, table.program.data);
-                arg_i++;
+            TokenList tokens = lex(arena, cmd_str);
+            for (Token *tok = tokens.first; tok != NULL; tok = tok->next) {
+                ar_info("%d: %.*s", tok->type, (I32) tok->part.len, tok->part.data);
             }
         }
     } else {
